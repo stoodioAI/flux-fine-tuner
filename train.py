@@ -33,7 +33,7 @@ from layer_match import match_layers_to_optimize, available_layers_to_optimize
 
 
 JOB_NAME = "flux_train_replicate"
-WEIGHTS_PATH = Path("./FLUX.1-dev")
+WEIGHTS_PATH = Path("./FLUX.1-Krea-dev")
 INPUT_DIR = Path("input_images")
 OUTPUT_DIR = Path("output")
 JOB_DIR = OUTPUT_DIR / JOB_NAME
@@ -304,7 +304,7 @@ def train(
                             "dtype": "bf16",
                         },
                         "model": {
-                            "name_or_path": str(WEIGHTS_PATH),
+                            "name_or_path": "black-forest-labs/FLUX.1-Krea-dev",
                             "is_flux": True,
                             "quantize": quantize,
                         },
@@ -521,15 +521,6 @@ def download_huggingface_lora(hf_lora_url: str, output_path: str):
 
 
 def download_weights():
-    if not WEIGHTS_PATH.exists():
-        t1 = time.time()
-        subprocess.check_output(
-            [
-                "pget",
-                "-xf",
-                "https://weights.replicate.delivery/default/black-forest-labs/FLUX.1-dev/files.tar",
-                str(WEIGHTS_PATH.parent),
-            ]
-        )
-        t2 = time.time()
-        print(f"Downloaded base weights in {t2 - t1} seconds")
+    # No need to download weights manually - they will be downloaded automatically
+    # when the model is loaded from Hugging Face
+    print("Weights will be downloaded automatically from Hugging Face")

@@ -27,12 +27,12 @@ from weights import WeightsDownloadCache
 from lora_loading_patch import load_lora_into_transformer
 
 MODEL_URL_DEV = (
-    "https://weights.replicate.delivery/default/black-forest-labs/FLUX.1-dev/files.tar"
+    "https://huggingface.co/black-forest-labs/FLUX.1-Krea-dev/resolve/main/flux1-krea-dev.safetensors"
 )
 MODEL_URL_SCHNELL = "https://weights.replicate.delivery/default/black-forest-labs/FLUX.1-schnell/slim.tar"
 SAFETY_URL = "https://weights.replicate.delivery/default/sdxl/safety-1.0.tar"
 SAFETY_CACHE_PATH = Path("safety-cache")
-FLUX_DEV_PATH = Path("FLUX.1-dev")
+FLUX_DEV_PATH = Path("FLUX.1-Krea-dev")
 FLUX_SCHNELL_PATH = Path("FLUX.1-schnell")
 FEATURE_EXTRACTOR = Path("/src/feature-extractor")
 
@@ -95,33 +95,34 @@ class Predictor(BasePredictor):
         )
         self.falcon_processor = ViTImageProcessor.from_pretrained(FALCON_MODEL_NAME)
 
-        print("Loading Flux dev pipeline")
-        if not FLUX_DEV_PATH.exists():
-            download_base_weights(MODEL_URL_DEV, Path("."))
+        print("Loading Flux Krea dev pipeline")
+        # Load directly from Hugging Face - no need to download manually
         dev_pipe = FluxPipeline.from_pretrained(
-            "FLUX.1-dev",
+            "black-forest-labs/FLUX.1-Krea-dev",
             torch_dtype=torch.bfloat16,
+            use_auth_token=os.environ.get("HF_TOKEN"),
         ).to("cuda")
         dev_pipe.__class__.load_lora_into_transformer = classmethod(
             load_lora_into_transformer
         )
 
-        print("Loading Flux schnell pipeline")
-        if not FLUX_SCHNELL_PATH.exists():
-            download_base_weights(MODEL_URL_SCHNELL, FLUX_SCHNELL_PATH)
-        schnell_pipe = FluxPipeline.from_pretrained(
-            "FLUX.1-schnell",
-            vae=dev_pipe.vae,
-            text_encoder=dev_pipe.text_encoder,
-            text_encoder_2=dev_pipe.text_encoder_2,
-            tokenizer=dev_pipe.tokenizer,
-            tokenizer_2=dev_pipe.tokenizer_2,
-            torch_dtype=torch.bfloat16,
-        ).to("cuda")
+        # Commenting out schnell model loading since we only need it for training
+        # print("Loading Flux schnell pipeline")
+        # if not FLUX_SCHNELL_PATH.exists():
+        #     download_base_weights(MODEL_URL_SCHNELL, FLUX_SCHNELL_PATH)
+        # schnell_pipe = FluxPipeline.from_pretrained(
+        #     "FLUX.1-schnell",
+        #     vae=dev_pipe.vae,
+        #     text_encoder=dev_pipe.text_encoder,
+        #     text_encoder_2=dev_pipe.text_encoder_2,
+        #     tokenizer=dev_pipe.tokenizer,
+        #     tokenizer_2=dev_pipe.tokenizer_2,
+        #     torch_dtype=torch.bfloat16,
+        # ).to("cuda")
 
         self.pipes = {
             "dev": dev_pipe,
-            "schnell": schnell_pipe,
+            # "schnell": schnell_pipe,  # Commented out for training-only use
         }
 
         # Load img2img pipelines
@@ -139,20 +140,21 @@ class Predictor(BasePredictor):
             load_lora_into_transformer
         )
 
-        print("Loading Flux schnell img2img pipeline")
-        schnell_img2img_pipe = FluxImg2ImgPipeline(
-            transformer=schnell_pipe.transformer,
-            scheduler=schnell_pipe.scheduler,
-            vae=schnell_pipe.vae,
-            text_encoder=schnell_pipe.text_encoder,
-            text_encoder_2=schnell_pipe.text_encoder_2,
-            tokenizer=schnell_pipe.tokenizer,
-            tokenizer_2=schnell_pipe.tokenizer_2,
-        ).to("cuda")
+        # Commenting out schnell img2img pipeline for training-only use
+        # print("Loading Flux schnell img2img pipeline")
+        # schnell_img2img_pipe = FluxImg2ImgPipeline(
+        #     transformer=schnell_pipe.transformer,
+        #     scheduler=schnell_pipe.scheduler,
+        #     vae=schnell_pipe.vae,
+        #     text_encoder=schnell_pipe.text_encoder,
+        #     text_encoder_2=schnell_pipe.text_encoder_2,
+        #     tokenizer=schnell_pipe.tokenizer,
+        #     tokenizer_2=schnell_pipe.tokenizer_2,
+        # ).to("cuda")
 
         self.img2img_pipes = {
             "dev": dev_img2img_pipe,
-            "schnell": schnell_img2img_pipe,
+            # "schnell": schnell_img2img_pipe,  # Commented out for training-only use
         }
 
         # Load inpainting pipelines
@@ -170,25 +172,26 @@ class Predictor(BasePredictor):
             load_lora_into_transformer
         )
 
-        print("Loading Flux schnell inpaint pipeline")
-        schnell_inpaint_pipe = FluxInpaintPipeline(
-            transformer=schnell_pipe.transformer,
-            scheduler=schnell_pipe.scheduler,
-            vae=schnell_pipe.vae,
-            text_encoder=schnell_pipe.text_encoder,
-            text_encoder_2=schnell_pipe.text_encoder_2,
-            tokenizer=schnell_pipe.tokenizer,
-            tokenizer_2=schnell_pipe.tokenizer_2,
-        ).to("cuda")
+        # Commenting out schnell inpaint pipeline for training-only use
+        # print("Loading Flux schnell inpaint pipeline")
+        # schnell_inpaint_pipe = FluxInpaintPipeline(
+        #     transformer=schnell_pipe.transformer,
+        #     scheduler=schnell_pipe.scheduler,
+        #     vae=schnell_pipe.vae,
+        #     text_encoder=schnell_pipe.text_encoder,
+        #     text_encoder_2=schnell_pipe.text_encoder_2,
+        #     tokenizer=schnell_pipe.tokenizer,
+        #     tokenizer_2=schnell_pipe.tokenizer_2,
+        # ).to("cuda")
 
         self.inpaint_pipes = {
             "dev": dev_inpaint_pipe,
-            "schnell": schnell_inpaint_pipe,
+            # "schnell": schnell_inpaint_pipe,  # Commented out for training-only use
         }
 
         self.loaded_lora_urls = {
             "dev": LoadedLoRAs(main=None, extra=None),
-            "schnell": LoadedLoRAs(main=None, extra=None),
+            # "schnell": LoadedLoRAs(main=None, extra=None),  # Commented out for training-only use
         }
         print("setup took: ", time.time() - start)
 
@@ -499,7 +502,22 @@ def download_base_weights(url: str, dest: Path):
     start = time.time()
     print("downloading url: ", url)
     print("downloading to: ", dest)
-    subprocess.check_call(["pget", "-xf", url, dest], close_fds=False)
+    
+    # Check if this is a Hugging Face URL that needs authentication
+    if "huggingface.co" in url and "resolve/main" in url:
+        hf_token = os.environ.get("HF_TOKEN")
+        if not hf_token:
+            raise ValueError("HF_TOKEN environment variable is required for Hugging Face downloads")
+        
+        # Use curl with proper authentication headers for Hugging Face
+        subprocess.check_call([
+            "curl", "-L", "-H", f"Authorization: Bearer {hf_token}", 
+            "-o", str(dest), url
+        ], close_fds=False)
+    else:
+        # For other URLs (tar files), use pget with -xf
+        subprocess.check_call(["pget", "-xf", url, dest], close_fds=False)
+    
     print("downloading took: ", time.time() - start)
 
 
